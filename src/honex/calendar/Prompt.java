@@ -20,6 +20,7 @@ public class Prompt {
 
 
 	private void initPrompt() {
+		//json방식으로 저장하기 
 		//프로그램 시작할때 일정 불러오기 
 		//일정 화일로 저장하기 
 		//switch문으로 변경 

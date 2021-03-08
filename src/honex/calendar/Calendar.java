@@ -2,70 +2,130 @@ package honex.calendar;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 public class Calendar {
 
 	private static final int[] MAX_DAYS = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 	private static final int[] LEAP_MAX_DAYS = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 	private static final String SAVE_FILE = "Plan.dat";
-	
-	private HashMap< Date, PlanItem> planMap;
-	
-	public Calendar() { 
+	private static final String SAVE_JSON = "Plan.json";
+
+	private HashMap<Date, PlanItem> planMap;
+
+	public Calendar() {
 		planMap = new HashMap<Date, PlanItem>();
 	}
 
 	public void savedPlan() throws IOException {
-		File f = new File(SAVE_FILE);
-		if(f.exists()) {
-			BufferedReader inFile;
-			try {
-				inFile = new BufferedReader(new FileReader(f));
-				String sLine = null; 
-				while( (sLine = inFile.readLine()) != null ) {
-					String[] tline = sLine.split(",");
-					for(int i=0;i<tline.length;i++) { 
-						System.out.println(tline[i]); //읽어들인 문자열을 출력 합니다.
-					}
-
-				}
-			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} 
-		} else {
-			System.out.println("저장된 일정이 없습니다."); 
-		}
-		System.out.println("----------------"+"\n");
+		
+		//JSON parser object to parse read file
+        JSONParser jsonParser = new JSONParser();
+        
+        File f = new File(SAVE_JSON); 
+        if(f.exists()) {  
+        
+	        try (FileReader reader = new FileReader(SAVE_JSON))
+	        {
+	            //Read JSON file
+	            Object obj = jsonParser.parse(reader);
+	 
+	            JSONArray planningList = (JSONArray) obj;
+	            System.out.println(planningList);
+	             
+	            //Iterate over employee array
+	            planningList.forEach( emp -> parsePlanningObject( (JSONObject) emp ) );
+	 
+	        } catch (FileNotFoundException e) {
+	            e.printStackTrace();
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        } catch (ParseException e) {
+	            e.printStackTrace();
+	        }
+	        
+        }    
 	}
-
 	
+	  private static void parsePlanningObject(JSONObject planning) 
+	    {
+	        //Get employee object within list
+	        JSONObject planningObject = (JSONObject) planning.get("planning");
+	         
+	        //Get employee first name
+	        String date = (String) planningObject.get("date");    
+	        System.out.println(date);
+	         
+	        //Get employee last name
+	        String plan = (String) planningObject.get("plan");  
+	        System.out.println(plan);
+	         
+	    }
+
 	public PlanItem searchPlan(String strDate) {
 		Date date = PlanItem.getDatefromString(strDate);
 		return planMap.get(date);
 	}
 
 	public void registerPlan(String strDate, String Plan) {
-		PlanItem p = new PlanItem(strDate, Plan) ;
-		planMap.put(p.planDate,p);
-		File f = new File(SAVE_FILE);
+		PlanItem p = new PlanItem(strDate, Plan);
+		planMap.put(p.planDate, p);
+
+		JSONObject jobj = new JSONObject();
+
+		jobj.put("date", strDate);
+		jobj.put("plan", Plan);
+		
+		JSONObject jobt= new JSONObject(); 
+		jobt.put("planning", jobj);
+		
+		//Add planning to list
+        JSONArray jobList = new JSONArray();
+        jobList.add(jobt);
+        
+		File f = new File(SAVE_JSON);
+		FileWriter fw;
+		String str1 = (jobList.toJSONString().replace("[", "")).replace("]", "");
+		System.out.println(str1);
 		try {
-			FileWriter fw = new FileWriter(f,true);
-			fw.write(strDate + " , " + Plan+"\r\n");
+			fw = new FileWriter(f, true);
+			fw.write("  \r\n" + str1 + "\r\n" +  "   \r\n");
+			fw.flush();
 			fw.close();
-			System.out.println("성공적으로 등록되었습니다..!!");
+			RandomAccessFile f1 = new RandomAccessFile(new File(SAVE_JSON), "rw");
+			f1.seek(0);
+			f1.write("[ \n".getBytes());
+            f1.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
 
+//
+//		File f = new File(SAVE_FILE);
+//		try {
+//			FileWriter fw = new FileWriter(f,true);
+//			fw.write(strDate + " , " + Plan+"\r\n");
+//			fw.close();
+//			System.out.println("성공적으로 등록되었습니다..!!");
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+	}
 
 //	public static void main(String[] args) {
 //		Calendar calendar = new Calendar();
@@ -94,27 +154,29 @@ public class Calendar {
 
 		// month day
 
-		for (int i = 0; i < month-1; i++) {
+		for (int i = 0; i < month - 1; i++) {
 			if (isLeapYear(year)) {
 				sDay = sDay + LEAP_MAX_DAYS[i];
-			} else {	
+			} else {
 				sDay = sDay + MAX_DAYS[i];
 			}
 		}
-		
-		//day
-		sDay=sDay+day;
-		
-		int weekday ; 
-		//week day 
-		if (year==1970 && month==1) { 
+
+		// day
+		sDay = sDay + day;
+
+		int weekday;
+		// week day
+		if (year == 1970 && month == 1) {
 			weekday = STANDARD_WEEKDAY;
-		} else {  
+		} else {
 			weekday = (sDay) % 7;
-			weekday = weekday+(STANDARD_WEEKDAY-1);
-		}	
-		
-		if (weekday==7) { weekday=0; }
+			weekday = weekday + (STANDARD_WEEKDAY - 1);
+		}
+
+		if (weekday == 7) {
+			weekday = 0;
+		}
 		return weekday;
 	}
 
