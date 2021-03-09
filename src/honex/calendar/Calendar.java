@@ -2,16 +2,13 @@ package honex.calendar;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.Reader;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
-
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -21,8 +18,8 @@ public class Calendar {
 
 	private static final int[] MAX_DAYS = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 	private static final int[] LEAP_MAX_DAYS = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-	private static final String SAVE_FILE = "Plan.dat";
 	private static final String SAVE_JSON = "Plan.json";
+	private static final String SAVE_TEMP = "Temp.dat";
 
 	private HashMap<Date, PlanItem> planMap;
 
@@ -31,7 +28,7 @@ public class Calendar {
 	}
 
 	public void savedPlan() throws IOException {
-		
+	
 		//JSON parser object to parse read file
         JSONParser jsonParser = new JSONParser();
         
@@ -44,10 +41,11 @@ public class Calendar {
 	            Object obj = jsonParser.parse(reader);
 	 
 	            JSONArray planningList = (JSONArray) obj;
-	            System.out.println(planningList);
+	            //System.out.println(planningList);
 	             
 	            //Iterate over employee array
 	            planningList.forEach( emp -> parsePlanningObject( (JSONObject) emp ) );
+	            System.out.println("----------------"+"\n");
 	 
 	        } catch (FileNotFoundException e) {
 	            e.printStackTrace();
@@ -57,7 +55,8 @@ public class Calendar {
 	            e.printStackTrace();
 	        }
 	        
-        }    
+        }
+            
 	}
 	
 	  private static void parsePlanningObject(JSONObject planning) 
@@ -96,36 +95,48 @@ public class Calendar {
         JSONArray jobList = new JSONArray();
         jobList.add(jobt);
         
-		File f = new File(SAVE_JSON);
+		File f = new File(SAVE_TEMP);
 		FileWriter fw;
-		String str1 = (jobList.toJSONString().replace("[", "")).replace("]", "");
-		System.out.println(str1);
+		
 		try {
 			fw = new FileWriter(f, true);
-			fw.write("  \r\n" + str1 + "\r\n" +  "   \r\n");
+			fw.write("  \r\n" + jobList.toJSONString() + "\r\n" +  "   \r\n");
 			fw.flush();
 			fw.close();
-			RandomAccessFile f1 = new RandomAccessFile(new File(SAVE_JSON), "rw");
-			f1.seek(0);
-			f1.write("[ \n".getBytes());
-            f1.close();
+			replaceInFile(f);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
-//
-//		File f = new File(SAVE_FILE);
-//		try {
-//			FileWriter fw = new FileWriter(f,true);
-//			fw.write(strDate + " , " + Plan+"\r\n");
-//			fw.close();
-//			System.out.println("성공적으로 등록되었습니다..!!");
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
 	}
+	
+	
+	public void replaceInFile(File file) throws IOException {
+
+		File f= new File(SAVE_JSON);           //file to be delete  
+		f.delete();
+		
+	    File tempFile = new File(SAVE_JSON);
+	    FileWriter fw;
+	    fw = new FileWriter(tempFile, true);
+
+	    Reader fr = new FileReader(file);
+	    BufferedReader br = new BufferedReader(fr);
+
+        fw.write("[  \n");
+	    while(br.ready()) {
+	        String tmpstr1=br.readLine().replace("[", " ");
+	        String tmpstr2=tmpstr1.replace("]", " ");
+	        fw.write(tmpstr2 + "\n");
+	    }
+        fw.write("]  \n");
+        
+	    fw.close();
+	    br.close();
+	    fr.close();
+
+	}
+	
 
 //	public static void main(String[] args) {
 //		Calendar calendar = new Calendar();
@@ -246,11 +257,7 @@ public class Calendar {
 		}
 
 		System.out.println("\n");
-//		System.out.println(" 1	 2	 3	 4	 5	 6	 7");
-//		System.out.println(" 8	 9	10	11	12	13	14");
-//		System.out.println("15	16	17	18	19	20	21");
-//		System.out.println("22	23	24	25	26	27	28");
-//		System.out.println("29	30	31		      ");
+
 	}
 
 }
